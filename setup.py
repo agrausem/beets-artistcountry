@@ -11,7 +11,7 @@ setup(
     author='Arnaud Grausem',
     author_email='arnaud.grausem@gmail.com',
     description='Retrieves the country of the artist from musicbrainz',
-    long_description=open('README.md').read(),
+    long_description=open('README.rst').read(),
     url='https://github.com/agrausem/beets-artistcountry',
     install_requires=[
         'beets',
