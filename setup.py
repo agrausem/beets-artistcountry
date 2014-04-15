@@ -5,7 +5,7 @@ from setuptools import setup
 
 setup(
     name='beets-artistcountry',
-    version='0.1',
+    version='0.1.1',
     namespace_packages=['beetsplug'],
     packages=['beetsplug'],
     author='Arnaud Grausem',
