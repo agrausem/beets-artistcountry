@@ -40,6 +40,16 @@ def _find_top_area(area):
         a['area'] for a in new_area['area']['area-relation-list']
         if a.get('direction', '') == 'backward'
     ]
+
     if not new_area:
         return area['iso-3166-1-code-list']
-    return _find_top_area(new_area[0])
+
+    area = new_area[0]
+    if _has_country_iso_code(area):
+        return area['iso-3166-1-code-list']
+
+    return _find_top_area(area)
+
+
+def _has_country_iso_code(area):
+    return area['type'] == "Country" and "iso-3166-1-code-list" in area
