@@ -1,16 +1,20 @@
 from beets.plugins import BeetsPlugin
 from musicbrainzngs.musicbrainz import get_artist_by_id, get_area_by_id
 
+
 class CountryPlugin(BeetsPlugin):
     pass
-      
+
+
 def memoize_artist(f):
     cache = {}
+
     def memf(item):
         artist_id = item['mb_artistid']
         if artist_id not in cache:
             cache[artist_id] = f(item)
         return cache[artist_id]
+
     return memf
 
 
