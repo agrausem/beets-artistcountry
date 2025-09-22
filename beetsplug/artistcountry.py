@@ -21,16 +21,26 @@ def memoize_artist(f):
 @CountryPlugin.template_field('artist_country')
 @memoize_artist
 def _tmpl_country(item):
-    artist_item = get_artist_by_id(item['mb_artistid'])
-    artist = artist_item['artist']
-    country = artist.get('country', '')
-    if not country:
-        try:
-            country = _country_from_area(artist['area'])
-        except:
-            print("No country for %s" % artist['name'])
-            return ''
-    return country.lower()
+    mb_artistid = item['mb_artistid']
+
+    # Check if we have a valid MusicBrainz UUID (not Spotify ID)
+    if not mb_artistid or len(mb_artistid) != 36 or mb_artistid.count('-') != 4:
+        return ''
+
+    try:
+        artist_item = get_artist_by_id(mb_artistid)
+        artist = artist_item['artist']
+        country = artist.get('country', '')
+        if not country:
+            try:
+                country = _country_from_area(artist['area'])
+            except:
+                print("No country for %s" % artist['name'])
+                return ''
+        return country.lower()
+    except Exception as e:
+        print(f"Error fetching country for artist {mb_artistid}: {e}")
+        return ''
 
 
 def _country_from_area(area):
