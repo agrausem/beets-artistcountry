@@ -1,6 +1,6 @@
 import beets
 import musicbrainzngs
-from beets import logging
+from beets import logging, ui
 from beets.dbcore import types
 from beets.plugins import BeetsPlugin
 from musicbrainzngs.musicbrainz import get_artist_by_id, get_area_by_id
@@ -20,6 +20,21 @@ class CountryPlugin(BeetsPlugin):
                                      'https://beets.io/')
         if self.config['auto']:
             self.import_stages = [self.imported]
+
+    def commands(self):
+        cmd = ui.Subcommand('artistcountry',
+                            help=u'fetch the country of artists from MusicBrainz')
+        cmd.parser.add_option(
+            '-f', '--force', action='store_true', default=False,
+            help=u'fetch the country again when it is already set')
+
+        def func(lib, opts, args):
+            for item in lib.items(args):
+                if opts.force or not item.get('artist_country'):
+                    fetch_country(item)
+
+        cmd.func = func
+        return [cmd]
 
     def imported(self, session, task):
         for item in task.imported_items():

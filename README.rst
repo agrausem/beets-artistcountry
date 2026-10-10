@@ -19,8 +19,20 @@ configuration file (config.yaml) ::
 How to use it
 -------------
 
-You can now use the template field `artist_country` to build your path in your
-audio library. Here is an example to do this in your configuration file ::
+The plugin stores the field `artist_country` on each item when you import it.
+To turn this off, add this to your configuration file ::
+
+    artistcountry:
+        auto: no
+
+To fill in items you have already imported, run ::
+
+    $> beet artistcountry [QUERY]
+
+Items that already have a country are skipped. Use `-f` to fetch them again.
+
+You can use the field `artist_country` to build your path in your audio
+library. Here is an example to do this in your configuration file ::
 
     paths:
         defaults:
