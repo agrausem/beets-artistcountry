@@ -52,7 +52,7 @@ def memoize_artist(f):
     cache = {}
 
     def memf(item):
-        artist_id = item['mb_artistid']
+        artist_id = item['mb_albumartistid']
         if artist_id not in cache:
             cache[artist_id] = f(item)
         return cache[artist_id]
@@ -62,14 +62,15 @@ def memoize_artist(f):
 
 @memoize_artist
 def _artist_country(item):
-    mb_artistid = item['mb_artistid']
+    mb_albumartistid = item['mb_albumartistid']
 
     # Check if we have a valid MusicBrainz UUID (not Spotify ID)
-    if not mb_artistid or len(mb_artistid) != 36 or mb_artistid.count('-') != 4:
+    if (not mb_albumartistid or len(mb_albumartistid) != 36
+            or mb_albumartistid.count('-') != 4):
         return ''
 
     try:
-        artist_item = get_artist_by_id(mb_artistid)
+        artist_item = get_artist_by_id(mb_albumartistid)
         artist = artist_item['artist']
         country = artist.get('country', '')
         if not country:
@@ -82,7 +83,7 @@ def _artist_country(item):
         return country.lower()
     except musicbrainzngs.WebServiceError as e:
         log.warning(u'Error fetching country for artist {0}: {1}',
-                    mb_artistid, e)
+                    mb_albumartistid, e)
         return ''
 
 

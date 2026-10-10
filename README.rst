@@ -20,7 +20,8 @@ How to use it
 -------------
 
 The plugin stores the field `artist_country` on each item when you import it.
-To turn this off, add this to your configuration file ::
+It is the country of the album artist, so all tracks of an album share it and
+stay in the same folder. To skip the lookup on import, add this to your configuration file ::
 
     artistcountry:
         auto: no
