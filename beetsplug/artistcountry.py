@@ -1,9 +1,36 @@
+import beets
+import musicbrainzngs
+from beets import logging
+from beets.dbcore import types
 from beets.plugins import BeetsPlugin
 from musicbrainzngs.musicbrainz import get_artist_by_id, get_area_by_id
 
+log = logging.getLogger('beets.artistcountry')
+
 
 class CountryPlugin(BeetsPlugin):
-    pass
+    item_types = {'artist_country': types.STRING}
+
+    def __init__(self):
+        super(CountryPlugin, self).__init__()
+        self.config.add({'auto': True})
+        # beets 2.x no longer sets a user agent for musicbrainzngs, which
+        # refuses to send requests without one.
+        musicbrainzngs.set_useragent('beets', beets.__version__,
+                                     'https://beets.io/')
+        if self.config['auto']:
+            self.import_stages = [self.imported]
+
+    def imported(self, session, task):
+        for item in task.imported_items():
+            fetch_country(item)
+
+
+def fetch_country(item):
+    country = _artist_country(item)
+    if country:
+        item['artist_country'] = country
+        item.store()
 
 
 def memoize_artist(f):
@@ -18,9 +45,8 @@ def memoize_artist(f):
     return memf
 
 
-@CountryPlugin.template_field('artist_country')
 @memoize_artist
-def _tmpl_country(item):
+def _artist_country(item):
     mb_artistid = item['mb_artistid']
 
     # Check if we have a valid MusicBrainz UUID (not Spotify ID)
@@ -34,12 +60,14 @@ def _tmpl_country(item):
         if not country:
             try:
                 country = _country_from_area(artist['area'])
-            except:
-                print("No country for %s" % artist['name'])
+            except (KeyError, IndexError):
+                log.info(u'No country for {0}', artist['name'])
                 return ''
+        log.info(u'{0}: {1}', artist['name'], country.lower())
         return country.lower()
-    except Exception as e:
-        print(f"Error fetching country for artist {mb_artistid}: {e}")
+    except musicbrainzngs.WebServiceError as e:
+        log.warning(u'Error fetching country for artist {0}: {1}',
+                    mb_artistid, e)
         return ''
 
 
