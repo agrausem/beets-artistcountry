@@ -1,16 +1,58 @@
+import beets
+import musicbrainzngs
+from beets import logging, ui
+from beets.dbcore import types
 from beets.plugins import BeetsPlugin
 from musicbrainzngs.musicbrainz import get_artist_by_id, get_area_by_id
 
+log = logging.getLogger('beets.artistcountry')
+
 
 class CountryPlugin(BeetsPlugin):
-    pass
+    item_types = {'artist_country': types.STRING}
+
+    def __init__(self):
+        super(CountryPlugin, self).__init__()
+        self.config.add({'auto': True})
+        # beets 2.x no longer sets a user agent for musicbrainzngs, which
+        # refuses to send requests without one.
+        musicbrainzngs.set_useragent('beets', beets.__version__,
+                                     'https://beets.io/')
+        if self.config['auto']:
+            self.import_stages = [self.imported]
+
+    def commands(self):
+        cmd = ui.Subcommand('artistcountry',
+                            help=u'fetch the country of artists from MusicBrainz')
+        cmd.parser.add_option(
+            '-f', '--force', action='store_true', default=False,
+            help=u'fetch the country again when it is already set')
+
+        def func(lib, opts, args):
+            for item in lib.items(args):
+                if opts.force or not item.get('artist_country'):
+                    fetch_country(item)
+
+        cmd.func = func
+        return [cmd]
+
+    def imported(self, session, task):
+        for item in task.imported_items():
+            fetch_country(item)
+
+
+def fetch_country(item):
+    country = _artist_country(item)
+    if country:
+        item['artist_country'] = country
+        item.store()
 
 
 def memoize_artist(f):
     cache = {}
 
     def memf(item):
-        artist_id = item['mb_artistid']
+        artist_id = item['mb_albumartistid']
         if artist_id not in cache:
             cache[artist_id] = f(item)
         return cache[artist_id]
@@ -18,19 +60,31 @@ def memoize_artist(f):
     return memf
 
 
-@CountryPlugin.template_field('artist_country')
 @memoize_artist
-def _tmpl_country(item):
-    artist_item = get_artist_by_id(item['mb_artistid'])
-    artist = artist_item['artist']
-    country = artist.get('country', '')
-    if not country:
-        try:
-            country = _country_from_area(artist['area'])
-        except:
-            print("No country for %s" % artist['name'])
-            return ''
-    return country.lower()
+def _artist_country(item):
+    mb_albumartistid = item['mb_albumartistid']
+
+    # Check if we have a valid MusicBrainz UUID (not Spotify ID)
+    if (not mb_albumartistid or len(mb_albumartistid) != 36
+            or mb_albumartistid.count('-') != 4):
+        return ''
+
+    try:
+        artist_item = get_artist_by_id(mb_albumartistid)
+        artist = artist_item['artist']
+        country = artist.get('country', '')
+        if not country:
+            try:
+                country = _country_from_area(artist['area'])
+            except (KeyError, IndexError):
+                log.info(u'No country for {0}', artist['name'])
+                return ''
+        log.info(u'{0}: {1}', artist['name'], country.lower())
+        return country.lower()
+    except musicbrainzngs.WebServiceError as e:
+        log.warning(u'Error fetching country for artist {0}: {1}',
+                    mb_albumartistid, e)
+        return ''
 
 
 def _country_from_area(area):
